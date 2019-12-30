@@ -6,7 +6,10 @@ let mainWindow = null;
 app.on('ready', () => {
 
     mainWindow = new BrowserWindow({
-        show: false
+        show: false,
+        webPreferences: {
+            nodeIntegration: true
+        }
     });
 
     mainWindow.loadFile('app/index.html');
@@ -15,6 +18,7 @@ app.on('ready', () => {
     mainWindow.once('ready-to-show', () => {
         // show the window when the DOM is ready
         mainWindow.show();
+        //mainWindow.webContents.openDevTools();
     });
 
     mainWindow.on('closed', () => {
