@@ -20,7 +20,7 @@ app.on('ready', () => {
         // show the window when the DOM is ready
         mainWindow.show();
         //mainWindow.webContents.openDevTools();
-        getFileFromUser();
+        //getFileFromUser();
     });
 
     mainWindow.on('closed', () => {
@@ -29,7 +29,7 @@ app.on('ready', () => {
 });
 
 // triggers the operating system's Open File dialog box
-const getFileFromUser = () => {
+const getFileFromUser = exports.getFileFromUser = () => {
 
     dialog.showOpenDialog(mainWindow, {
         properties: ['openFile'],
@@ -43,5 +43,8 @@ const getFileFromUser = () => {
         // read the file, convert resulting buffer to a string
         const content = fs.readFileSync(file).toString();
         console.log(content);
+        // send the file name and its content to the renderer process over
+        // the file-opened channel
+        mainWindow.webContents.send('file-opened', file, content);
     } );
 };
