@@ -10,6 +10,24 @@ app.on('ready', () => {
     createWindow();
 });
 
+app.on('window-all-closed', () => {
+    // checks to see if the app is running on MacOS
+    if (process.platform === 'darwin') {
+        // if it is, returns false to prevent the default action
+        return false;
+    }
+    // if it isn't, quit the app
+    app.quit();
+});
+
+// activate event fires only on MacOS
+app.on('activate', (event, hasVisibleWindows) => {
+    // if there are no visible windows when the user activates the app, create one
+    if (!hasVisibleWindows) {
+        createWindow();
+    }
+});
+
 // triggers the operating system's Open File dialog box
 const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
     dialog.showOpenDialog(targetWindow, {
