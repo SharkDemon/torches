@@ -28,6 +28,17 @@ app.on('activate', (event, hasVisibleWindows) => {
     }
 });
 
+// listens for the open-file event, which provides the path of the externally
+// opened file, and then passes that file path to our openFile() function
+app.on('will-finish-launching', () => {
+    app.on('open-file', (event, file) => {
+        const win = createWindow();
+        win.once('ready-to-show', () => {
+            openFile(win, file);
+        });
+    });
+});
+
 // triggers the operating system's Open File dialog box
 const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
     dialog.showOpenDialog(targetWindow, {
@@ -47,6 +58,8 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
 const openFile = exports.openFile = (targetWindow, file) => {
     // read the file, convert resulting buffer to a string
     const content = fs.readFileSync(file).toString();
+    // append the file to the operating system's list of recently opened docs
+    app.addRecentDocument(file);
     // BrowserWindow instances have a method that allows you to set the
     // represented file (for MacOS)
     targetWindow.setRepresentedFilename(file);
