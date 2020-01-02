@@ -47,6 +47,9 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
 const openFile = exports.openFile = (targetWindow, file) => {
     // read the file, convert resulting buffer to a string
     const content = fs.readFileSync(file).toString();
+    // BrowserWindow instances have a method that allows you to set the
+    // represented file (for MacOS)
+    targetWindow.setRepresentedFilename(file);
     // send the file name and its content to the renderer process over
     // the file-opened channel
     targetWindow.webContents.send('file-opened', file, content);
