@@ -19,9 +19,11 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
             { name: 'Markdown Files', extensions: ['md', 'markdown'] }
         ]
     }).then( (data) => {
-        // pull the first file from the array
-        openFile(targetWindow, data.filePaths[0]);
-    } );
+        if (!data.canceled) {
+            // pull the first file from the array
+            openFile(targetWindow, data.filePaths[0]);
+        }
+    });
 };
 
 const openFile = exports.openFile = (targetWindow, file) => {
@@ -33,7 +35,18 @@ const openFile = exports.openFile = (targetWindow, file) => {
 };
 
 const createWindow = exports.createWindow = () => {
+    let x, y;
+    const currentWindow = BrowserWindow.getFocusedWindow();
+    // if there's a currently active window from the previous step, sets the
+    // coords of the next window down/right from currently active window
+    if (currentWindow) {
+        const [ currentWindowX, currentWindowY ] = currentWindow.getPosition();
+        x = currentWindowX + 10;
+        y = currentWindowY + 10;
+    }
+
     let newWindow = new BrowserWindow({ 
+        x, y,
         show: false,
         webPreferences: {
             // need to figure out security settings to finally get this to false
