@@ -48,10 +48,9 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
             { name: 'Markdown Files', extensions: ['md', 'markdown'] }
         ]
     }).then( (data) => {
-        if (!data.canceled) {
-            // pull the first file from the array
-            openFile(targetWindow, data.filePaths[0]);
-        }
+        if (data.canceled) return;
+        // pull the first file from the array
+        openFile(targetWindow, data.filePaths[0]);
     });
 };
 
@@ -97,4 +96,38 @@ const createWindow = exports.createWindow = () => {
     });
     windows.add(newWindow);
     return newWindow;
+};
+
+const saveMarkdown = exports.saveMarkdown = (targetWindow, file, content) => {
+    if (!file) {
+        dialog.showSaveDialog(targetWindow, {
+            title: 'Save Markdown',
+            // defaults to the user's documents directory, as defined by the OS
+            defaultPath: app.getPath('documents'),
+            filters: [
+                { name: 'Markdown Files', extensions: ['md', 'markdown'] }
+            ]
+        }).then( (data) => {
+            if (data.canceled) return;
+            file = data.filePaths[0];
+        });
+    }
+    // writes the contents of the buffer to the file system
+    fs.writeFileSync(file, content);
+    openFile(targetWindow, file);
+};
+
+const saveHtml = exports.saveHtml = (targetWindow, content) => {
+    dialog.showSaveDialog(targetWindow, {
+        title: 'Save HTML',
+        // defaults to the user's documents directory, as defined by the OS
+        defaultPath: app.getPath('documents'),
+        filters: [
+            { name: 'HTML Files', extensions: ['html', 'htm'] }
+        ]
+    }).then( (data) => {
+        if (data.canceled) return;
+        console.log('filePath=' + data.filePath);
+        fs.writeFileSync(data.filePath, content);
+    });
 };
