@@ -20,6 +20,11 @@ const openInDefaultButton = document.querySelector('#open-in-default');
 let filePath = null;
 let originalContent = '';
 
+document.addEventListener('dragstart', event => event.preventDefault());
+document.addEventListener('dragover', event => event.preventDefault());
+document.addEventListener('dragleave', event => event.preventDefault());
+document.addEventListener('drop', event => event.preventDefault());
+
 const renderMarkdownToHtml = (markdown) => {
     htmlView.innerHTML = marked(markdown, { sanitize: true });
 };
@@ -41,10 +46,50 @@ const updateUserInterface = (isEdited) => {
     revertButton.disabled = !isEdited;
 };
 
+// will always be an array, because multiple file selection is
+// supported; our app supports only one file at a time - grab
+// the first in the array
+const getDraggedFile = (event) => event.dataTransfer.items[0];
+// similar to getDraggedFile, but when the user drops the file,
+// we have access to the file itself instead of just metadata
+const getDroppedFile = (event) => event.dataTransfer.files[0];
+
+// this helper function returns true/false if the file's type is in
+// the array of supported file types
+const fileTypeIsSupported = (file) => {
+    return ['text/plain', 'text/markdown'].includes(file.type)
+};
+
 markdownView.addEventListener('keyup', (event) => {
     const currentContent = event.target.value;
     renderMarkdownToHtml(currentContent);
     updateUserInterface(currentContent !== originalContent);
+});
+markdownView.addEventListener('dragover', (event) => {
+    const file = getDraggedFile(event);
+    if (fileTypeIsSupported(file)) {
+        // if we support the file type, add CSS class to indicate this is
+        // a valid place to drop the file
+        markdownView.classList.add('drag-over')
+    } else {
+        // if we don't support the file type, add CSS class to indicate
+        // this file is not accepted
+        markdownView.classList.add('drag-error');
+    }
+});
+markdownView.addEventListener('dragleave', (event) => {
+    markdownView.classList.remove('drag-over');
+    markdownView.classList.remove('drag-error');
+});
+markdownView.addEventListener('drop', (event) => {
+    const file = getDroppedFile(event);
+    if (fileTypeIsSupported(file)) {
+        mainProcess.openFile(currentWindow, file.path);
+    } else {
+        alert('That file type is not supported');
+    }
+    markdownView.classList.remove('drag-over');
+    markdownView.classList.remove('drag-error');
 });
 
 newFileButton.addEventListener('click', () => {
