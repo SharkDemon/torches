@@ -4,7 +4,10 @@ const { app, BrowserWindow, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
+// collection of active BrowserWindows
 const windows = new Set();
+// map of active BrowserWindows and the file watchers
+const openFiles = new Map();
 
 app.on('ready', () => {
     createWindow();
@@ -92,6 +95,8 @@ const createWindow = exports.createWindow = () => {
     });
     newWindow.on('closed', () => {
         windows.delete(newWindow);
+        // when the window is closed, stop watching the file associated with the window
+        stopWatchingFile(newWindow);
         newWindow = null;
     });
     windows.add(newWindow);
@@ -130,4 +135,29 @@ const saveHtml = exports.saveHtml = (targetWindow, content) => {
         console.log('filePath=' + data.filePath);
         fs.writeFileSync(data.filePath, content);
     });
+};
+
+const startWatchingFile = (targetWindow, file) => {
+    // close any existing file watcher
+    stopWatchingFile(targetWindow);
+    const watcher = fs.watchFile(file, (event) => {
+        // if the watcher fires a change event, re-read the file
+        if (event === 'change') {
+            const content = fs.readFileSync(file);
+            // send message to the renderer process with the content
+            // of the file
+            targetWindow.webContents.send('file-opened', file, content);
+        }
+    });
+    // track the file watcher so we can stop it later
+    openFiles.set(targetWindow, watcher);
+};
+
+const stopWatchingFile = (targetWindow) => {
+    if (openFiles.has(targetWindow)) {
+        // stop the file watcher
+        openFiles.get(targetWindow).stop();
+        // delete the file watcher from the map of open windows
+        openFiles.delete(targetWindow);
+    }
 };
