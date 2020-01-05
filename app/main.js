@@ -93,6 +93,22 @@ const createWindow = exports.createWindow = () => {
     newWindow.once('ready-to-show', () => {
         newWindow.show();
     });
+    newWindow.on('close', (event) => {
+        if (newWindow.isDocumentEdited()) {
+            event.preventDefault();
+            dialog.showMessageBox(newWindow, {
+                type: 'warning',
+                title: 'Quit with Unsaved Changes?',
+                message: '',
+                buttons: [ 'Quit Anyway', 'Cancel' ],
+                defaultId: 0,
+                cancelId: 1
+            }).then( (data) => {
+                // if the user selects Quit Anyway, force window to close
+                if (data.response === 0) newWindow.destroy();
+            });
+        }
+    });
     newWindow.on('closed', () => {
         windows.delete(newWindow);
         // when the window is closed, stop watching the file associated with the window
@@ -137,16 +153,17 @@ const saveHtml = exports.saveHtml = (targetWindow, content) => {
     });
 };
 
+// 6.28
 const startWatchingFile = (targetWindow, file) => {
     // close any existing file watcher
     stopWatchingFile(targetWindow);
     const watcher = fs.watchFile(file, (event) => {
         // if the watcher fires a change event, re-read the file
         if (event === 'change') {
-            const content = fs.readFileSync(file);
+            const content = fs.readFileSync(file).toString();
             // send message to the renderer process with the content
             // of the file
-            targetWindow.webContents.send('file-opened', file, content);
+            targetWindow.webContents.send('file-changed', file, content);
         }
     });
     // track the file watcher so we can stop it later

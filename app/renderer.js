@@ -60,6 +60,17 @@ const fileTypeIsSupported = (file) => {
     return ['text/plain', 'text/markdown'].includes(file.type)
 };
 
+// 6.25
+const renderFile = (file, content) => {
+    filePath = file;
+    originalContent = content;
+
+    markdownView.value = content;
+    renderMarkdownToHtml(content);
+
+    updateUserInterface(false);
+};
+
 markdownView.addEventListener('keyup', (event) => {
     const currentContent = event.target.value;
     renderMarkdownToHtml(currentContent);
@@ -113,12 +124,39 @@ saveHtmlButton.addEventListener('click', () => {
     mainProcess.saveHtml(currentWindow, htmlView.innerHTML);
 });
 
+// 6.26
 ipcRenderer.on('file-opened', (event, file, content) => {
+    if (currentWindow.isDocumentEdited()) {
+        // use remote module to trigger dialog box from main process
+        remote.dialog.showMessageBox(currentWindow, {
+            type: 'warning',
+            title: 'Overwrite Current Unsaved Changes?',
+            message: 'Opening a new file in this window will overwrite your unsaved changes.  Open this file anyway?',
+            buttons: [ 'Yes', 'Cancel' ],
+            defaultId: 0,
+            cancelId: 1
+        }).then( (data) => {
+            // if the user cancels, return early
+            if (data.response === 1) return;
+        });
+        // set the window to its unedited state because user opened a new file
+        renderFile(file, content);
+    }
     filePath = file;
     originalContent = content;
+});
 
-    markdownView.value = content;
-    renderMarkdownToHtml(content);
-    // updates the window's title bar when new file is opened
-    updateUserInterface();
+// 6.27
+ipcRenderer.on('file-changed', (event, file, content) => {
+    // in this situation, we don't care if the document has been edited; we want
+    // to prompt the user regardless
+    remote.dialog.showMessageBox(currentWindow, {
+        type: 'warning',
+        title: 'Overwrite Current Unsaved Changes?',
+        message: 'Another application has changed this file.  Load changes?',
+        buttons: [ 'Yes', 'Cancel' ],
+        defaultId: 0,
+        cancelId: 1
+    });
+    renderFile(file, content);
 });
