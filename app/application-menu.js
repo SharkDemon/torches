@@ -64,7 +64,23 @@ const template = [
 // if MacOS, move new menu item to beginning of template array
 if (process.platform === 'darwin') {
     const name = app.getName();
-    template.unshift({ label: name });
+    template.unshift({
+        label: name,
+        submenu: [
+            {
+                label: `About ${name}`,
+                role: 'about',
+            },
+            {
+                type: 'separator'
+            },
+            {
+                label: 'Services',
+                role: 'services',
+                submenu: []
+            }
+        ]
+    });
 }
 
 // build a menu from the template, and export it so it can be used
