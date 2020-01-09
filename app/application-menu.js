@@ -1,9 +1,56 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, dialog, BrowserWindow, Menu, shell } = require('electron');
 const mainProcess = require('./main');
 
 const template = [
+    {
+        label: 'File',
+        submenu: [
+            {
+                label: 'New File',
+                accelerator: 'CommandOrControl+N',
+                click() {
+                    mainProcess.createWindow();
+                }
+            },
+            {
+                label: 'Open File',
+                accelerator: 'CommandOrControl+O',
+                click(item, focusedWindow) {
+                    if (focusedWindow) {
+                        return mainProcess.getFileFromUser(focusedWindow);
+                    }
+                    const newWindow = mainProcess.createWindow();
+                    newWindow.on('show', () => {
+                        mainProcess.getFileFromUser(newWindow);
+                    });
+                }
+            },
+            {
+                label: 'Save File',
+                accelerator: 'CommandOrControl+S',
+                click(item, focusedWindow) {
+                    if (!focusedWindow) {
+                        return dialog.showErrorBox('Cannot Save or Export',
+                            'There is currently no active document to save or export.');
+                    }
+                    focusedWindow.webContents.send('save-markdown');
+                }
+            },
+            {
+                label: 'Export HTML',
+                accelerator: 'Shift+CommandOrControl+S',
+                click(item, focusedWindow) {
+                    if (!focusedWindow) {
+                        return dialog.showErrorBox('Cannot Save or Export',
+                            'There is currently no active document to save or export.');
+                    }
+                    focusedWindow.webContents.send('save-html');
+                }
+            }
+        ]
+    },
     {
         label: 'Edit',
         submenu: [
@@ -54,6 +101,22 @@ const template = [
                 label: 'Close',
                 accelerator: 'CommandOrControl+W',
                 role: 'close'
+            }
+        ]
+    },
+    {
+        label: 'Help',
+        role: 'help',
+        submenu: [
+            {
+                label: 'Visit Website',
+                click() { /* TODO */ }
+            },
+            {
+                label: 'Togger Developer Tools',
+                click(item, focusedWindow) {
+                    if (focusedWindow) focusedWindow.webContents.toggleDevTools();
+                }
             }
         ]
     }
@@ -109,6 +172,16 @@ if (process.platform === 'darwin') {
         ]
     });
 }
+
+const windowMenu = template.find(item => item.label === 'Window');
+windowMenu.role = 'window';
+windowMenu.submenu.push(
+    { type: 'separator' },
+    {
+        label: 'Bring All to Front',
+        role: 'front'
+    }
+);
 
 // build a menu from the template, and export it so it can be used
 // in the main process

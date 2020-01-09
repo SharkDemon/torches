@@ -1,10 +1,10 @@
 'use strict';
 
 const { remote, ipcRenderer } = require('electron');
+const { Menu } = remote;
+const path = require('path');
 const mainProcess = remote.require('./main.js');
 const currentWindow = remote.getCurrentWindow();
-
-const path = require('path');
 const marked = require('marked');
 
 const markdownView = document.querySelector('#markdown');
@@ -20,13 +20,21 @@ const openInDefaultButton = document.querySelector('#open-in-default');
 let filePath = null;
 let originalContent = '';
 
-document.addEventListener('dragstart', event => event.preventDefault());
-document.addEventListener('dragover', event => event.preventDefault());
-document.addEventListener('dragleave', event => event.preventDefault());
-document.addEventListener('drop', event => event.preventDefault());
+const isDifferentContent = (content) => content !== markdownView.value;
 
 const renderMarkdownToHtml = (markdown) => {
     htmlView.innerHTML = marked(markdown, { sanitize: true });
+};
+
+// 6.25
+const renderFile = (file, content) => {
+    filePath = file;
+    originalContent = content;
+
+    markdownView.value = content;
+    renderMarkdownToHtml(content);
+
+    updateUserInterface(false);
 };
 
 const updateUserInterface = (isEdited) => {
@@ -46,6 +54,75 @@ const updateUserInterface = (isEdited) => {
     revertButton.disabled = !isEdited;
 };
 
+markdownView.addEventListener('keyup', (event) => {
+    const currentContent = event.target.value;
+    renderMarkdownToHtml(currentContent);
+    updateUserInterface(currentContent !== originalContent);
+});
+
+newFileButton.addEventListener('click', () => {
+    mainProcess.createWindow();
+});
+
+openFileButton.addEventListener('click', () => {
+    mainProcess.getFileFromUser(currentWindow);
+});
+
+saveMarkdownButton.addEventListener('click', () => {
+    mainProcess.saveMarkdown(currentWindow, filePath, markdownView.value);
+});
+
+revertButton.addEventListener('click', () => {
+    markdownView.value = originalContent;
+    renderMarkdownToHtml(originalContent);
+});
+
+saveHtmlButton.addEventListener('click', () => {
+    mainProcess.saveHtml(currentWindow, htmlView.innerHTML);
+});
+
+// 6.26
+ipcRenderer.on('file-opened', (event, file, content) => {
+    if (currentWindow.isDocumentEdited() && isDifferentContent(content)) {
+        // use remote module to trigger dialog box from main process
+        remote.dialog.showMessageBox(currentWindow, {
+            type: 'warning',
+            title: 'Overwrite Current Unsaved Changes?',
+            message: 'Opening a new file in this window will overwrite your unsaved changes.  Open this file anyway?',
+            buttons: [ 'Yes', 'Cancel' ],
+            defaultId: 0,
+            cancelId: 1
+        }).then( (data) => {
+            // if the user cancels, return early
+            if (data.response === 1) return;
+        });
+    }
+    // set the window to its unedited state because user opened a new file
+    renderFile(file, content);
+});
+
+// 6.27
+ipcRenderer.on('file-changed', (event, file, content) => {
+    if (!isDifferentContent(content)) return;
+    // in this situation, we don't care if the document has been edited; we want
+    // to prompt the user regardless
+    remote.dialog.showMessageBox(currentWindow, {
+        type: 'warning',
+        title: 'Overwrite Current Unsaved Changes?',
+        message: 'Another application has changed this file.  Load changes?',
+        buttons: [ 'Yes', 'Cancel' ],
+        defaultId: 0,
+        cancelId: 1
+    });
+    renderFile(file, content);
+});
+
+// implement drag and drop
+document.addEventListener('dragstart', event => event.preventDefault());
+document.addEventListener('dragover', event => event.preventDefault());
+document.addEventListener('dragleave', event => event.preventDefault());
+document.addEventListener('drop', event => event.preventDefault());
+
 // will always be an array, because multiple file selection is
 // supported; our app supports only one file at a time - grab
 // the first in the array
@@ -60,22 +137,6 @@ const fileTypeIsSupported = (file) => {
     return ['text/plain', 'text/markdown'].includes(file.type)
 };
 
-// 6.25
-const renderFile = (file, content) => {
-    filePath = file;
-    originalContent = content;
-
-    markdownView.value = content;
-    renderMarkdownToHtml(content);
-
-    updateUserInterface(false);
-};
-
-markdownView.addEventListener('keyup', (event) => {
-    const currentContent = event.target.value;
-    renderMarkdownToHtml(currentContent);
-    updateUserInterface(currentContent !== originalContent);
-});
 markdownView.addEventListener('dragover', (event) => {
     const file = getDraggedFile(event);
     if (fileTypeIsSupported(file)) {
@@ -103,60 +164,26 @@ markdownView.addEventListener('drop', (event) => {
     markdownView.classList.remove('drag-error');
 });
 
-newFileButton.addEventListener('click', () => {
-    mainProcess.createWindow();
-});
-
-openFileButton.addEventListener('click', () => {
-    mainProcess.getFileFromUser(currentWindow);
-});
-
-saveMarkdownButton.addEventListener('click', () => {
+ipcRenderer.on('save-markdown', () => {
     mainProcess.saveMarkdown(currentWindow, filePath, markdownView.value);
 });
 
-revertButton.addEventListener('click', () => {
-    markdownView.value = originalContent;
-    renderMarkdownToHtml(originalContent);
-});
-
-saveHtmlButton.addEventListener('click', () => {
+ipcRenderer.on('save-html', () => {
     mainProcess.saveHtml(currentWindow, htmlView.innerHTML);
 });
 
-// 6.26
-ipcRenderer.on('file-opened', (event, file, content) => {
-    if (currentWindow.isDocumentEdited()) {
-        // use remote module to trigger dialog box from main process
-        remote.dialog.showMessageBox(currentWindow, {
-            type: 'warning',
-            title: 'Overwrite Current Unsaved Changes?',
-            message: 'Opening a new file in this window will overwrite your unsaved changes.  Open this file anyway?',
-            buttons: [ 'Yes', 'Cancel' ],
-            defaultId: 0,
-            cancelId: 1
-        }).then( (data) => {
-            // if the user cancels, return early
-            if (data.response === 1) return;
-        });
-        // set the window to its unedited state because user opened a new file
-        renderFile(file, content);
-    }
-    filePath = file;
-    originalContent = content;
-});
+const markdownContextMenu = Menu.buildFromTemplate([
+    { label: 'Open File', click() {
+        mainProcess.getFileFromUser(currentWindow);
+    } },
+    { type: 'separator' },
+    { label: 'Cut', role: 'cut' },
+    { label: 'Copy', role: 'copy' },
+    { label: 'Paste', role: 'paste' },
+    { label: 'Select All', role: 'selectall' },
+]);
 
-// 6.27
-ipcRenderer.on('file-changed', (event, file, content) => {
-    // in this situation, we don't care if the document has been edited; we want
-    // to prompt the user regardless
-    remote.dialog.showMessageBox(currentWindow, {
-        type: 'warning',
-        title: 'Overwrite Current Unsaved Changes?',
-        message: 'Another application has changed this file.  Load changes?',
-        buttons: [ 'Yes', 'Cancel' ],
-        defaultId: 0,
-        cancelId: 1
-    });
-    renderFile(file, content);
+markdownView.addEventListener('contextmenu', () => {
+    event.preventDefault();
+    markdownContextMenu.popup();
 });

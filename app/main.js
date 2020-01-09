@@ -56,7 +56,7 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
         if (data.canceled) return;
         // pull the first file from the array
         openFile(targetWindow, data.filePaths[0]);
-    });
+    }).catch( (e) => console.error(e) );
 };
 
 const openFile = exports.openFile = (targetWindow, file) => {
@@ -70,6 +70,7 @@ const openFile = exports.openFile = (targetWindow, file) => {
     // send the file name and its content to the renderer process over
     // the file-opened channel
     targetWindow.webContents.send('file-opened', file, content);
+    startWatchingFile(targetWindow, file);
 };
 
 const createWindow = exports.createWindow = () => {
@@ -101,7 +102,7 @@ const createWindow = exports.createWindow = () => {
             dialog.showMessageBox(newWindow, {
                 type: 'warning',
                 title: 'Quit with Unsaved Changes?',
-                message: '',
+                message: 'Your changes will be lost permanently if you do not save.',
                 buttons: [ 'Quit Anyway', 'Cancel' ],
                 defaultId: 0,
                 cancelId: 1
@@ -150,7 +151,6 @@ const saveHtml = exports.saveHtml = (targetWindow, content) => {
         ]
     }).then( (data) => {
         if (data.canceled) return;
-        console.log('filePath=' + data.filePath);
         fs.writeFileSync(data.filePath, content);
     });
 };
