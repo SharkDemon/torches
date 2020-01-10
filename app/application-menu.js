@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, dialog, BrowserWindow, Menu, shell } = require('electron');
+const { app, dialog, Menu, shell } = require('electron');
 const mainProcess = require('./main');
 
 const template = [
@@ -21,7 +21,9 @@ const template = [
                     if (focusedWindow) {
                         return mainProcess.getFileFromUser(focusedWindow);
                     }
+                    // if there is no focused window, create one
                     const newWindow = mainProcess.createWindow();
+                    // when the new window is shown, prompt the user to select file
                     newWindow.on('show', () => {
                         mainProcess.getFileFromUser(newWindow);
                     });

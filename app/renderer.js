@@ -26,13 +26,18 @@ const renderMarkdownToHtml = (markdown) => {
     htmlView.innerHTML = marked(markdown, { sanitize: true });
 };
 
-// 6.25
+// 8.1
 const renderFile = (file, content) => {
     filePath = file;
     originalContent = content;
 
     markdownView.value = content;
     renderMarkdownToHtml(content);
+
+    // when file path has been sent to renderer process to be displayed,
+    // we enable these buttons
+    showFileButton.disabled = false;
+    openInDefaultButton.disabled = false;
 
     updateUserInterface(false);
 };
