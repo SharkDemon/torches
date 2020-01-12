@@ -1,6 +1,6 @@
 'use strict';
 
-const { remote, ipcRenderer } = require('electron');
+const { remote, ipcRenderer, shell } = require('electron');
 const { Menu } = remote;
 const path = require('path');
 const mainProcess = remote.require('./main.js');
@@ -192,3 +192,24 @@ markdownView.addEventListener('contextmenu', () => {
     event.preventDefault();
     markdownContextMenu.popup();
 });
+
+const showFile = () => {
+    if (!filePath) {
+        return alert('This file has not been saved to the filesystem.');
+    }
+    // trigger OS native file browser to open new window with specified
+    // path highlighted
+    shell.showItemInFolder(filePath);
+};
+
+const openInDefaultApplication = () => {
+    if (!filePath) {
+        return alert('This file has not been saved to the filesystem.');
+    }
+    // requests that the file be opened by the OS, using the default
+    // application as specified by the user
+    shell.openItem(filePath);
+};
+
+showFileButton.addEventListener('click', showFile);
+openInDefaultApplication.addEventListener('click', openInDefaultApplication);

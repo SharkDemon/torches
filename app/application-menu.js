@@ -50,6 +50,21 @@ const template = [
                     }
                     focusedWindow.webContents.send('save-html');
                 }
+            },
+            {
+                type: 'separator'
+            },
+            {
+                label: 'Show File',
+                click(item, focusedWindow) {
+
+                }
+            },
+            {
+                label: 'Open in Default Editor',
+                click(item, focusedWindow) {
+
+                }
             }
         ]
     },
