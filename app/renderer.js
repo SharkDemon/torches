@@ -202,6 +202,7 @@ openInDefaultButton.addEventListener('click', openInDefaultApplication);
 ipcRenderer.on('show-file', showFile);
 ipcRenderer.on('open-in-default', openInDefaultApplication);
 
+/**
 const markdownContextMenu = Menu.buildFromTemplate([
     { label: 'Open File', click() {
         mainProcess.getFileFromUser(currentWindow);
@@ -218,8 +219,35 @@ const markdownContextMenu = Menu.buildFromTemplate([
     { label: 'Paste', role: 'paste' },
     { label: 'Select All', role: 'selectall' },
 ]);
+*/
 
-markdownView.addEventListener('contextmenu', () => {
+const createContextMenu = () => {
+    return Menu.buildFromTemplate([
+        { label: 'Open File', click() {
+            mainProcess.getFileFromUser(currentWindow);
+        } },
+        { label: 'Show File in Folder',
+          click: showFile,
+          // coercing filePath into boolean
+          enabled: !!filePath
+        },
+        { label: 'Open in Default Editor',
+            click: openInDefaultApplication,
+          // coercing filePath into boolean
+          enabled: !!filePath
+        },
+        { type: 'separator' },
+        { label: 'Cut', role: 'cut' },
+        { label: 'Copy', role: 'copy' },
+        { label: 'Paste', role: 'paste' },
+        { label: 'Select All', role: 'selectall' },
+    ]);
+};
+
+markdownView.addEventListener('contextmenu', (event) => {
     event.preventDefault();
-    markdownContextMenu.popup();
+    // instead of using a pre-existing menu, call createContextMenu
+    // to create a new menu each time and then immediately call
+    // its popup
+    createContextMenu().popup();
 });
