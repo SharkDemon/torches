@@ -57,13 +57,29 @@ const template = [
             {
                 label: 'Show File',
                 click(item, focusedWindow) {
-
+                    if (!focusedWindow) {
+                        return dialog.showErrorBox(
+                            'Cannot Show File\'s Location',
+                            'There is currently no active document to show.'
+                        );
+                    }
+                    // if the user selects the Show File menu item, send message over
+                    // show-file channel to frontmost window
+                    focusedWindow.webContents.send('show-file');
                 }
             },
             {
                 label: 'Open in Default Editor',
                 click(item, focusedWindow) {
-
+                    if (!focusedWindow) {
+                        return dialog.showErrorBox(
+                            'Cannot Open File in Default Editor',
+                            'There is currently no active document to open.'
+                        );
+                    }
+                    // if the user selects the Open in Default Editor menu item, send
+                    // message over open-in-default channel to frontmost window
+                    focusedWindow.webContents.send('open-in-default');
                 }
             }
         ]

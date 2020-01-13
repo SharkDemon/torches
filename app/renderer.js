@@ -212,4 +212,8 @@ const openInDefaultApplication = () => {
 };
 
 showFileButton.addEventListener('click', showFile);
-openInDefaultApplication.addEventListener('click', openInDefaultApplication);
+openInDefaultButton.addEventListener('click', openInDefaultApplication);
+
+// 8.4
+ipcRenderer.on('show-file', showFile);
+ipcRenderer.on('open-in-default', openInDefaultApplication);
