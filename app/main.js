@@ -1,7 +1,7 @@
 'use strict';
 
 const { app, BrowserWindow, dialog, Menu } = require('electron');
-const applicationMenu = require('./application-menu');
+const createApplicationMenu = require('./application-menu');
 const fs = require('fs');
 const path = require('path');
 
@@ -11,7 +11,8 @@ const windows = new Set();
 const openFiles = new Map();
 
 app.on('ready', () => {
-    Menu.setApplicationMenu(applicationMenu);
+    // creates application menu when app is first launched and is ready
+    createApplicationMenu();
     createWindow();
 });
 
@@ -62,6 +63,7 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
 const openFile = exports.openFile = (targetWindow, file) => {
     // read the file, convert resulting buffer to a string
     const content = fs.readFileSync(file).toString();
+    startWatchingFile(targetWindow, file);
     // append the file to the operating system's list of recently opened docs
     app.addRecentDocument(file);
     // BrowserWindow instances have a method that allows you to set the
@@ -70,7 +72,9 @@ const openFile = exports.openFile = (targetWindow, file) => {
     // send the file name and its content to the renderer process over
     // the file-opened channel
     targetWindow.webContents.send('file-opened', file, content);
-    startWatchingFile(targetWindow, file);
+    // creates new application menu whenever file has been opened and
+    // the represented file has been set
+    createApplicationMenu();
 };
 
 const createWindow = exports.createWindow = () => {
@@ -96,6 +100,8 @@ const createWindow = exports.createWindow = () => {
     newWindow.once('ready-to-show', () => {
         newWindow.show();
     });
+    // creates a new application menu whenever new window gains focus
+    newWindow.on('focus', createApplicationMenu);
     newWindow.on('close', (event) => {
         if (newWindow.isDocumentEdited()) {
             event.preventDefault();
@@ -116,6 +122,8 @@ const createWindow = exports.createWindow = () => {
         windows.delete(newWindow);
         // when the window is closed, stop watching the file associated with the window
         stopWatchingFile(newWindow);
+        // creates new application menu whenever window is closed
+        createApplicationMenu();
         newWindow = null;
     });
     windows.add(newWindow);

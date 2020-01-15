@@ -213,21 +213,19 @@ const createApplicationMenu = () => {
         });
     }
 
+    const windowMenu = template.find(item => item.label === 'Window');
+    windowMenu.role = 'window';
+    windowMenu.submenu.push(
+        { type: 'separator' },
+        {
+            label: 'Bring All to Front',
+            role: 'front'
+        }
+    );
+
     return Menu.setApplicationMenu( Menu.buildFromTemplate(template) );
 };
 
-
-const windowMenu = template.find(item => item.label === 'Window');
-windowMenu.role = 'window';
-windowMenu.submenu.push(
-    { type: 'separator' },
-    {
-        label: 'Bring All to Front',
-        role: 'front'
-    }
-);
-
 // build a menu from the template, and export it so it can be used
 // in the main process
-//module.exports = Menu.buildFromTemplate(template);
 module.exports = createApplicationMenu;
